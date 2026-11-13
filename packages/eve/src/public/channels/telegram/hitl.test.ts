@@ -43,6 +43,64 @@ describe("renderTelegramInteraction", () => {
     });
     expect(Object.keys(state.hitlCallbacks ?? {})).toEqual(["eve:0", "eve:1"]);
     expect("eve:0".length).toBeLessThanOrEqual(64);
+    expect(rendered.text).toBe("Approve?");
+  });
+
+  it("lists each option's full label and description under the prompt", () => {
+    const warning = `${"A".repeat(90)} IMPORTANT: selecting this option *loses* <b>data</b>.`;
+    const longLabel = `Keep ${"x".repeat(75)}`;
+    const rendered = renderTelegramInteraction(
+      {
+        call: { callId: "call_1", input: {}, name: "ask_question" },
+        request: {
+          kind: "question",
+          options: [
+            { description: warning, id: "one", label: "Option one" },
+            { id: "two", label: longLabel },
+            { description: "No data is lost.", id: "three", label: "Option three" },
+          ],
+          prompt: "Choose an option",
+        },
+        status: "open",
+        turnId: "turn_0",
+        stepIndex: 0,
+        interactionId: "call_1",
+      },
+      {},
+    );
+    const keyboard = (rendered.replyMarkup?.inline_keyboard ?? []) as { text: string }[][];
+
+    expect(rendered.text).toBe(
+      [
+        "Choose an option",
+        "",
+        `• Option one: ${warning}`,
+        `• ${longLabel}`,
+        "• Option three: No data is lost.",
+      ].join("\n"),
+    );
+    expect(keyboard.flat().map((button) => button.text.length <= 64)).toEqual([true, true, true]);
+  });
+
+  it("keeps option text within Telegram's message length", () => {
+    const rendered = renderTelegramInteraction(
+      {
+        call: { callId: "call_1", input: {}, name: "ask_question" },
+        request: {
+          kind: "question",
+          options: ["a", "b", "c"].map((id) => ({ description: "d".repeat(2000), id, label: id })),
+          prompt: "Choose",
+        },
+        status: "open",
+        turnId: "turn_0",
+        stepIndex: 0,
+        interactionId: "call_1",
+      },
+      {},
+    );
+
+    expect(rendered.text.length).toBeLessThanOrEqual(4000);
+    expect(rendered.text.startsWith("Choose\n\n• a: ddd")).toBe(true);
   });
 
   it("renders freeform requests as ForceReply prompts", () => {

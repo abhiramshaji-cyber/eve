@@ -107,6 +107,65 @@ describe("Teams HITL helpers", () => {
     );
   });
 
+  it("lists each option's description above a select's choice set", () => {
+    const warning = "IMPORTANT: selecting this option loses [data](https://evil.example).";
+    const body = renderInteractionMessage({
+      ...request(),
+      request: {
+        display: "select",
+        kind: "question",
+        options: [
+          { description: warning, id: "one", label: "Option one" },
+          { id: "two", label: "Option two" },
+        ],
+        prompt: "Choose an option",
+      },
+    });
+    const card = body.attachments?.[0]?.content as { body?: Array<Record<string, unknown>> };
+
+    expect(card.body?.slice(1)).toEqual([
+      {
+        inlines: [{ text: `• Option one: ${warning}\n• Option two`, type: "TextRun" }],
+        type: "RichTextBlock",
+      },
+      expect.objectContaining({
+        choices: [
+          { title: "Option one", value: "one" },
+          { title: "Option two", value: "two" },
+        ],
+        type: "Input.ChoiceSet",
+      }),
+    ]);
+  });
+
+  it("lists descriptions only for the option buttons the card shows", () => {
+    const body = renderInteractionMessage({
+      ...request(),
+      request: {
+        kind: "question",
+        options: ["a", "b", "c", "d", "e", "f", "g"].map((id) => ({
+          description: `Pick ${id}.`,
+          id,
+          label: id,
+        })),
+        prompt: "Choose",
+      },
+    });
+    const card = body.attachments?.[0]?.content as { actions?: unknown[]; body?: CardBlock[] };
+
+    expect(card.actions).toHaveLength(6);
+    expect(literalText(card.body?.[1])?.split("\n")).toEqual(
+      ["a", "b", "c", "d", "e", "f"].map((id) => `• ${id}: Pick ${id}.`),
+    );
+  });
+
+  it("adds no option list when the buttons show every label in full", () => {
+    const body = renderInteractionMessage(request());
+    const card = body.attachments?.[0]?.content as { body?: CardBlock[] };
+
+    expect(card.body).toHaveLength(1);
+  });
+
   it("decodes message and invoke submission values", () => {
     const message = parseTeamsActivity(
       activityWithValue({

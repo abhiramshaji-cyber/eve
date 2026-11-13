@@ -18,7 +18,7 @@ import {
 } from "#public/channels/teams/limits.js";
 import { isObject } from "#shared/guards.js";
 import { parseJsonObject, type JsonObject } from "#shared/json.js";
-import { truncate } from "#public/channels/text.js";
+import { optionDetails, truncate } from "#public/channels/text.js";
 
 /** Adaptive Card attachment content type used by Teams. */
 export const TEAMS_ADAPTIVE_CARD_CONTENT_TYPE = "application/vnd.microsoft.card.adaptive";
@@ -91,12 +91,14 @@ export function renderInteractionAttachment(
   } = {},
 ): TeamsAttachment {
   const details = formatApprovalInput(request);
+  const choices = renderOptionDetails(request);
   const card: Record<string, unknown> = {
     $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
     actions: renderActions(request, options.replyToActivityId),
     body: [
       literalText(request.request.prompt),
       ...(details ? [literalText(details, { fontType: "Monospace" })] : []),
+      ...(choices ? [literalText(choices)] : []),
       ...renderInputs(request),
     ],
     type: "AdaptiveCard",
@@ -238,6 +240,16 @@ export function teamsInvokeResponse(
     type: "application/vnd.microsoft.activity.message",
     value: input.message ?? "Answer received.",
   };
+}
+
+function renderOptionDetails(request: Interaction): string | undefined {
+  const options = request.request.options ?? [];
+  return request.request.display === "select"
+    ? optionDetails(options, TEAMS_ADAPTIVE_CARD_CHOICE_TITLE_MAX_LENGTH)
+    : optionDetails(
+        options.slice(0, TEAMS_ADAPTIVE_CARD_ACTION_LIMIT),
+        TEAMS_ADAPTIVE_CARD_ACTION_TITLE_MAX_LENGTH,
+      );
 }
 
 function renderInputs(request: Interaction): readonly Record<string, unknown>[] {

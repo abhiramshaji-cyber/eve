@@ -1,5 +1,7 @@
 // Text helpers the built-in channels share for platform limits.
 
+import type { InteractionOption } from "#protocol/session-events/families/interaction.js";
+
 /** Caps `value` at `maxLength` characters, ending a cut value with `...`. */
 export function truncate(value: string, maxLength: number): string {
   if (maxLength <= 0) return "";
@@ -14,4 +16,16 @@ export function chunk<T>(values: readonly T[], size: number): T[][] {
     result.push(values.slice(index, index + size));
   }
   return result;
+}
+
+export function optionDetails(
+  options: readonly Pick<InteractionOption, "description" | "label">[],
+  labelMaxLength: number,
+): string | undefined {
+  if (options.every((option) => !option.description && option.label.length <= labelMaxLength)) {
+    return undefined;
+  }
+  return options
+    .map(({ description, label }) => (description ? `• ${label}: ${description}` : `• ${label}`))
+    .join("\n");
 }
