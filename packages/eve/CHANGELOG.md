@@ -1,5 +1,26 @@
 # eve
 
+## 1.0.0-rc.17
+
+Released 2026-11-13 · [Compare with 1.0.0-rc.16](https://github.com/vercel/eve/compare/eve%401.0.0-rc.16...eve%401.0.0-rc.17)
+
+### Features
+
+- Publish `ghcr.io/vercel/eve-git`, eve's default sandbox image plus the GitHub CLI (`gh`), and the same image to Vercel Container Registry as `vcr.vercel.com/vercel/eve/git`.
+  Each eve release pins one tag of it, exported as `DEFAULT_EVE_GIT_SANDBOX_IMAGE` from `eve/sandbox/docker` and `VERCEL_EVE_GIT_SANDBOX_IMAGE` from `eve/sandbox/vercel`, and both from `eve/extensions/git/sandbox`, and `latest` moves to the tag of the released eve package.
+  Pass the constant as `image` so `installCodeTooling` from `eve/extensions/code/sandbox` finds `gh` and skips its `apt-get` install, which takes about 7 seconds of a first build. A Vercel Sandbox session from a prepared snapshot of the eve-git image runs no base setup command, like the default image. The default image is unchanged. ([#6246](https://github.com/vercel/eve/pull/6246))
+
+### Bug Fixes
+
+- Update eve's bundled dependencies, including the AI SDK, Vercel SDKs, Chat SDK, and MCP, to their latest releases, and OpenTelemetry to its latest 2.x releases.
+  eve now requires `ai` 7.0.172 or later.
+  YAML frontmatter, eval data files, and OpenAPI specs now parse with js-yaml 5 and YAML 1.2 values. An unquoted date such as `2024-01-02` loads as a string instead of a `Date`, and a `0b` binary literal such as `0b101` loads as a string instead of a number. The YAML 1.1 tags `!!timestamp`, `!!binary`, `!!set`, `!!omap`, and `!!pairs` are no longer recognized, and a mapping with a non-scalar key, such as `? [a]`, throws. `<<` merge keys still work.
+  MCP connections over Streamable HTTP now fail when the `server/discover` request fails before the server answers, instead of retrying with `initialize`. Set `protocolVersionDiscovery: false` for a server that can't handle that request. Servers that answer `server/discover` with a JSON-RPC error or an HTTP error status other than `401` still use `initialize`, and servers that reject the protocol version with a supported legacy version still negotiate it. ([#6378](https://github.com/vercel/eve/pull/6378))
+- Fix `eve dev` requests that use a sandbox failing with `ENOENT … sandbox-preparation.lock` when another request finished preparing sandboxes at the same time.
+  These requests now wait for the other request and continue, as they already did while preparation was in progress. ([#6388](https://github.com/vercel/eve/pull/6388))
+- Keep an answered ephemeral Slack card in its thread instead of also showing it at the top of the channel. ([#6381](https://github.com/vercel/eve/pull/6381))
+- When `eve__task_wait` returns with one task's result while others are still working, the result now tells the model to wait again if its reply needs the rest, so it no longer sends a partial answer first. ([#6380](https://github.com/vercel/eve/pull/6380))
+
 ## 1.0.0-rc.16
 
 Released 2026-11-13 · [Compare with 1.0.0-rc.14](https://github.com/vercel/eve/compare/eve%401.0.0-rc.14...eve%401.0.0-rc.16)
